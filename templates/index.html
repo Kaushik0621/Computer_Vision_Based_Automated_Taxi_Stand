@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Map with Heatmap and InfoWindows</title>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            color: #333;
+            background-color: #f0f4f8;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .input-container {
+            width: 300px;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #fff;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        #location-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        #location-input:focus {
+            border-color: #0056b3;
+            outline: none;
+        }
+        #map {
+            flex: 1;
+            height: 100%;
+            width: calc(100% - 300px);
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="input-container">
+            <h1>Dynamic Map Viewer</h1>
+            <input type="text" id="location-input" placeholder="Enter a location (e.g., London, New York)" />
+        </div>
+        
+        <div id="map"></div>
+    </div>
+
+    <!-- Google Maps API Script -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=visualization&callback=initMap"></script>
+
+    <!-- JavaScript to handle the map and SSE -->
+    <script>
+      let map;
+      let heatmap;
+
+      function initMap() {
+        // Initialize the map centered on Aberdeen
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: { lat: 57.1497, lng: -2.0943 },
+          zoom: 13,
+          mapTypeId: 'roadmap'
+        });
+
+        // Retrieve coordinates and numbers from Flask and initialize heatmap
+        const initialData = JSON.parse('{{ coordinates | tojson | safe }}');
+        const heatmapData = processHeatmapData(initialData);
+
+        heatmap = new google.maps.visualization.HeatmapLayer({
+          data: heatmapData,
+          map: map,
+          radius: 50,  // Increase the radius to make intensity more visible
+          opacity: 0.7  // Adjust the opacity to make intensity more visible
+        });
+
+        // Add markers with InfoWindows to show the number of people
+        initialData.forEach(item => {
+          const marker = new google.maps.Marker({
+            position: new google.maps.LatLng(item.location[0], item.location[1]),
+            map: map
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `<div>Number of people: ${item.number}</div>`
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+          });
+        });
+
+        // Set up SSE to listen for updates
+        const evtSource = new EventSource("/stream");
+
+        evtSource.addEventListener("update_coordinates", function(event) {
+          const data = JSON.parse(event.data);
+          updateHeatmap(data.coordinates);
+        });
+      }
+
+      function processHeatmapData(data) {
+        // Convert the input data to heatmap points with amplified weight
+        return data.map(item => ({
+          location: new google.maps.LatLng(item.location[0], item.location[1]),
+          weight: Math.pow(item.number, 2)  // Amplify the number to increase intensity differences
+        }));
+      }
+
+      function updateHeatmap(data) {
+        const heatmapData = processHeatmapData(data);
+        heatmap.setData(heatmapData);
+      }
+
+      // Geocode and center map based on user input
+      document.getElementById('location-input').addEventListener('change', function() {
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ 'address': this.value }, function(results, status) {
+          if (status === 'OK') {
+            map.setCenter(results[0].geometry.location);
+            map.setZoom(13);
+          } else {
+            alert('Geocode was not successful for the following reason: ' + status);
+          }
+        });
+      });
+    </script>
+</body>
+</html>
