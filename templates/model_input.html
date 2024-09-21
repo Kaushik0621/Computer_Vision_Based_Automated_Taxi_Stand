@@ -149,6 +149,7 @@
             <button type="button" id="addSectionBtn">Add Section</button>
             <button type="button" id="deleteSectionBtn" class="delete-section">Delete Last Section</button>
             <button type="submit">Submit</button>
+            <button type="button" id="goToMapBtn">Take me to map!</button>
         </form>
         <div id="message">Done!</div>
     </div>
@@ -200,6 +201,10 @@
                     document.getElementById('message').style.display = 'block';
                 }
             });
+        });
+
+        document.getElementById('goToMapBtn').addEventListener('click', function () {
+            window.location.href = "http://127.0.0.1:5001/";
         });
     </script>
 </body>
