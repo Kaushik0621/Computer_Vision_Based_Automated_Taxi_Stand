@@ -36,7 +36,8 @@ def submit():
             csv_filename = os.path.splitext(input_video_filename)[0] + '.csv'
             # Define paths for the output video and CSV
             output_video_path = os.path.join(camera_folder, f'output_{input_video_filename}')
-            csv_output_path = os.path.join(camera_folder, csv_filename)
+            os.makedirs(os.path.join(camera_folder, "output"), exist_ok=True)
+            csv_output_path = os.path.join(camera_folder, "output",csv_filename)
             # Process the video (assumed to create the CSV file)
             object_tracking_with_yolo(
                 input_video_path=input_video_path,
@@ -48,7 +49,6 @@ def submit():
                 df = pd.read_csv(csv_output_path)
                 number = len(df)
             except (pd.errors.EmptyDataError, FileNotFoundError):
-                # Handle the case where the CSV is empty or doesn't exist
                 number = 0
 
             # Create JSON for this camera
