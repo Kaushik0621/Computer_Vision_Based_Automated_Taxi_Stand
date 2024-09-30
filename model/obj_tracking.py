@@ -11,7 +11,6 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
     # Convert the polygon coordinates from string to a numpy array
     try:
         polygon = np.array(ast.literal_eval(polygon_str), np.int32).reshape((-1, 1, 2))
-        # print(f"Polygon coordinates: {polygon}")
     except Exception as e:
         print(f"Error parsing polygon coordinates: {e}")
         return
@@ -20,7 +19,6 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
     model_path = 'yolov8n.pt'
     try:
         model = YOLO(model_path)
-        # print(f"Model loaded successfully from {model_path}")
     except Exception as e:
         print(f"Error loading YOLO model: {e}")
         return
@@ -43,7 +41,6 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
 
     def callback(frame: np.ndarray, frame_idx: int) -> np.ndarray:
         nonlocal object_id_counter, object_trackers
-        # print(f"Processing frame {frame_idx}")
         results = model(frame)[0]  # Get the results from YOLO model
         
         # Draw the polygon on the frame
@@ -53,16 +50,11 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
         detections = results.boxes
         people_detections = [box for box in detections if box.cls[0] == 0]
 
-        if not people_detections:
-            pass
-            # print("No people detected in this frame.")
-
         for box in people_detections:
             # Get the bounding box coordinates and calculate the center point
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             x_center = (x1 + x2) // 2
             y_center = (y1 + y2) // 2
-            # print(f"Person detected at center: ({x_center}, {y_center})")
             
             # Generate a unique ID for each detection
             object_id = None
@@ -87,10 +79,9 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
                 time_inside_polygon[object_id] += time.time() - start_times[object_id]
                 start_times[object_id] = time.time()
                 
-                # Mark object as valid if it stays inside the polygon for more than 2 seconds
-                if time_inside_polygon[object_id] > 2:
+                # Mark object as valid if it stays inside the polygon for more than 40 seconds
+                if time_inside_polygon[object_id] > 40:
                     valid_objects.add(object_id)
-                    # print(f"Object {object_id} has been inside the polygon for more than 2 seconds.")
             else:
                 start_times.pop(object_id, None)  # Remove start time if the object leaves the area
 
@@ -110,10 +101,8 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
             csv_data.append({"object_id": obj_id, "time_inside_marked_area": time_inside_polygon[obj_id]})
         df = pd.DataFrame(csv_data)
         df.to_csv(csv_output_path, index=False)
-        # print(f"CSV saved to {csv_output_path}")
 
     # Process the video
-    # print(f"Processing video: {input_video_path}")
     sv.process_video(
         source_path=input_video_path,
         target_path=output_video_path,
@@ -123,11 +112,3 @@ def object_tracking_with_yolo(input_video_path, output_video_path, csv_output_pa
     # Save the CSV after processing is complete
     save_csv()
     print(f"Output video saved to {output_video_path}")
-
-# # Example usage of the function
-# object_tracking_with_yolo(
-#     input_video_path='city_people.mp4',
-#     output_video_path='output_video.mp4',
-#     csv_output_path='output_data.csv',
-#     polygon_str='[[742, 191], [725, 497], [633, 606], [693, 600], [732, 704], [730, 715],      [1207, 707], [1192, 292], [1192, 292], [1058, 202], [1057, 202],      [1024, 217], [959, 247], [933, 165], [933, 165], [759, 195], [745, 189] ]'
-# )

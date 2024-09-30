@@ -1,5 +1,16 @@
+import subprocess
 import cv2
 import numpy as np
+
+# Function to extract video stream URL using yt-dlp
+def get_stream_url(youtube_link):
+    command = ["yt-dlp", "-f", "best", "-g", youtube_link]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode == 0:
+        return result.stdout.strip()
+    else:
+        print("Error extracting stream URL:", result.stderr)
+        return None
 
 # Global variables
 drawing = False  # True if the mouse is being used to draw
@@ -31,14 +42,14 @@ def draw_polygon(event, x, y, flags, param):
         points.clear()
         drawing = False
 
-def select_polygon_on_webcam_feed(url):
+def select_polygon_on_video_stream(url):
     global frame, points, drawing
     points = []  # Initialize the points list
 
-    # Capture video stream from webcam
+    # Capture video stream from the provided URL
     cap = cv2.VideoCapture(url)
 
-    # Check if the webcam is opened correctly
+    # Check if the video stream is opened correctly
     if not cap.isOpened():
         print("Error: Could not open video stream.")
         return
@@ -52,7 +63,7 @@ def select_polygon_on_webcam_feed(url):
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Failed to capture frame from webcam.")
+            print("Failed to capture frame from video stream.")
             break
 
         if len(points) > 1:
@@ -74,5 +85,10 @@ def select_polygon_on_webcam_feed(url):
     return polygon_str
 
 # Example usage
-url = "http://192.168.8.152:2879/video"  # Replace with your webcam URL or IP camera stream URL
-polygon_str = select_polygon_on_webcam_feed(url)
+youtube_link = "https://www.youtube.com/watch?v=u4UZ4UvZXrg"  # Replace with your actual YouTube link
+stream_url = get_stream_url(youtube_link)
+
+if stream_url:
+    polygon_str = select_polygon_on_video_stream(stream_url)
+else:
+    print("Failed to retrieve the stream URL.")
